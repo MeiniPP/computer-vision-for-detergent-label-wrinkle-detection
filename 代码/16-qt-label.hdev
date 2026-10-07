@@ -1,0 +1,422 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hdevelop file_version="1.2" halcon_version="22.05.0.0">
+<procedure name="main">
+<interface/>
+<body>
+<c>* This example demonstrates the print inspection using</c>
+<c>* a variation model. The variation model is trained</c>
+<c>* using a single model image. Before applying the print inspection,</c>
+<c>* the images are scaled to the same gray value range like the model.</c>
+<c>* </c>
+<l>dev_update_off ()</l>
+<l>dev_close_window ()</l>
+<c>* </c>
+<c>* Read model image and init visualization</c>
+<l>read_image (ModelImage, 'Cam1_01')</l>
+<l>get_image_size (ModelImage, Width, Height)</l>
+<l>dev_open_window (0, 0, Width / 4, Height / 4, 'black', WindowHandle)</l>
+<l>set_display_font (WindowHandle, 14, 'mono', 'true', 'false')</l>
+<c>* </c>
+<c>* Segment model region</c>
+<l>dev_display (ModelImage)</l>
+<c></c>
+<l>read_shape_model ('bottle_body.shm', ModelID_BNK)</l>
+<l>read_region (RegionROI,'region.hobj')</l>
+<l>reduce_domain (ModelImage, RegionROI, ImageReduced)</l>
+<c></c>
+<l>sobel_amp (ImageReduced, VarImage, 'sum_abs', 5)</l>
+<c></c>
+<l>area_center (RegionROI, Area, RowModel, ColumnModel)</l>
+<l>read_shape_model('label_back.shm', ModelID_LAB)</l>
+<l>get_shape_model_contours (ModelContours_LAB, ModelID_LAB, 1)</l>
+<l>read_variation_model('label_back.vam', VariationID)</l>
+<c>* Generate variation image</c>
+<l>sobel_amp (ModelImage, VarImage, 'sum_sqrt', 3)</l>
+<l>prepare_direct_variation_model (ModelImage, VarImage, VariationID, 20, 1)</l>
+<c>* </c>
+<c>* Get gray value range of the variation model</c>
+<c></c>
+<l>get_grayval_range (ModelImage, RegionROI, RegionForeground, RegionBackground, BackgroundGVModel, ForegroundGVModel)</l>
+<c>* </c>
+<c>* Perform print inspection</c>
+<l>for I := 1 to 20 by 1</l>
+<l>    read_image (Image, 'Cam1_' + I$'02')  </l>
+<l>    inspect_label (Image, RegionROI, WindowHandle, ModelID_LAB, ModelID_BNK, VariationID, RowModel, ColumnModel, BackgroundGVModel, ForegroundGVModel)</l>
+<l>    disp_continue_message (WindowHandle, 'black', 'true')</l>
+<l>    stop ()</l>
+<l>endfor</l>
+<c>* </c>
+<l>* clear_shape_model (ModelID_LAB)</l>
+<l>* clear_variation_model (VariationID)</l>
+<c></c>
+</body>
+<docu id="main">
+<parameters/>
+</docu>
+</procedure>
+<procedure name="inspect_label">
+<interface>
+<io>
+<par name="rImage" base_type="iconic" dimension="0"/>
+<par name="RegionROI" base_type="iconic" dimension="0"/>
+</io>
+<ic>
+<par name="WindowHandle" base_type="ctrl" dimension="0"/>
+<par name="ModelID_LAB" base_type="ctrl" dimension="0"/>
+<par name="ModelID_BNK" base_type="ctrl" dimension="0"/>
+<par name="VariationID" base_type="ctrl" dimension="0"/>
+<par name="RowModel" base_type="ctrl" dimension="0"/>
+<par name="ColumnModel" base_type="ctrl" dimension="0"/>
+<par name="BackgroundGVModel" base_type="ctrl" dimension="0"/>
+<par name="ForegroundGVModel" base_type="ctrl" dimension="0"/>
+</ic>
+</interface>
+<body>
+<c></c>
+<l>get_shape_model_contours (ModelContours_BNK, ModelID_BNK, 1)</l>
+<l>find_scaled_shape_model(rImage, ModelID_BNK, -0.39, 0.78, 0.8, 1.2, 0.5, 1, 0.5, 'least_squares', 0, 0.9, Row_BNK, Column_BNK, Angle_BNK, Scale_BNK, Score_BNK)</l>
+<l>vector_angle_to_rigid (0, 0, 0, Row_BNK, Column_BNK, Angle_BNK, HomMat2D_BNK)</l>
+<l>hom_mat2d_scale (HomMat2D_BNK,  Scale_BNK, Scale_BNK, Row_BNK, Column_BNK, HomMat2DScale_BNK)</l>
+<l>affine_trans_contour_xld (ModelContours_BNK, ContoursAffineTrans_BNK, HomMat2DScale_BNK)</l>
+<l>gen_rectangle2_contour_xld(Rectangle_BNK, Row_BNK-150, Column_BNK, 0, 710, 840)</l>
+<c></c>
+<c>* Find shape model in the input image</c>
+<l>count_seconds (StartSeconds)</l>
+<c></c>
+<l>find_scaled_shape_model (rImage, ModelID_LAB, 0, rad(360), 0.9, 1.1, 0.4, 1, 1, 'least_squares_high', [5,3], 0.9, Row, Column, Angle, Scale, Score)</l>
+<l>count_seconds (EndSeconds)</l>
+<l>TimeObjSearch := EndSeconds - StartSeconds</l>
+<c>* </c>
+<l>get_shape_model_contours (ModelContours_LAB, ModelID_LAB, 1)</l>
+<c></c>
+<c>* </c>
+<l>if (|Row| &gt; 0)</l>
+<l>    error_column:=abs(Column-Column_BNK)</l>
+<l>    error_angle:=min([Angle*180.0/3.1415926,360.0-Angle*180.0/3.1415926])</l>
+<c>   * </c>
+<c>    * Align the model region and the found label region</c>
+<l>    vector_angle_to_rigid (Row[0], Column[0], Angle, RowModel[0], ColumnModel[0], 0, HomMat2DImage)  </l>
+<c></c>
+<l>    affine_trans_image (rImage, ImageAffineTrans, HomMat2DImage, 'constant', 'false')</l>
+<l>    get_grayval_range (ImageAffineTrans, RegionROI, RegionForegroundImage, RegionBackgroundImage, BackgroundImage, ForegroundImage)</l>
+<c>    * </c>
+<c>    * Scale image to the model's gray value range</c>
+<l>    Mult := (ForegroundGVModel - BackgroundGVModel) / (ForegroundImage - BackgroundImage)</l>
+<l>    Add := ForegroundGVModel - Mult * ForegroundImage</l>
+<c>    * Transform the contours of the models for the visualization</c>
+<l>    vector_angle_to_rigid (0, 0, 0, Row[0], Column[0], Angle, HomMat2DContour)</l>
+<l>    affine_trans_contour_xld (ModelContours_LAB, ModelContoursTrans, HomMat2DContour)</l>
+<l>    reduce_domain (ImageAffineTrans, RegionROI, ImageReduced)</l>
+<l>    scale_image (ImageReduced, ImageScaled, Mult, Add)</l>
+<c>       </c>
+<c>    * </c>
+<c>    * Print Inspection</c>
+<l>    count_seconds (StartSeconds)</l>
+<l>    compare_ext_variation_model (ImageScaled, RegionDiff, VariationID,  'light_dark')</l>
+<l>    count_seconds (EndSeconds)</l>
+<c>    * Analyze bright and dark defect regions</c>
+<l>    dev_display (rImage)</l>
+<l>    count_obj (RegionDiff, NumberRegionDiff)</l>
+<l>    for i := 1 to NumberRegionDiff by 1</l>
+<l>        select_obj (RegionDiff, RegionDiffSelected, i)</l>
+<l>        opening_circle (RegionDiffSelected, RegionOpening, 4)</l>
+<l>        connection (RegionOpening, ConnectedRegions)</l>
+<l>*         select_shape (ConnectedRegions, DefectRegions, 'height', 'and', 30, 99999)      </l>
+<l>        select_shape (ConnectedRegions, DefectRegions, 'rect2_len1', 'and', 25, 5000)</l>
+<c>        * </c>
+<c>        * Transform regions to the original position in the input image</c>
+<l>        hom_mat2d_invert (HomMat2DImage, HomMat2DInvert)</l>
+<l>        affine_trans_region (DefectRegions, DefectRegionsTrans, HomMat2DInvert, 'nearest_neighbor')</l>
+<l>        closing_circle (DefectRegionsTrans, DefectRegionsClosing, 1.5)</l>
+<c>        * </c>
+<c>        * Display bright and dark defects using different colors</c>
+<l>        dev_set_line_width (2)</l>
+<l>        dev_set_draw ('fill')</l>
+<l>        if (i == 1)</l>
+<l>            dev_set_color ('red')</l>
+<l>        else</l>
+<l>            dev_set_color ('orange')</l>
+<l>        endif</l>
+<l>        dev_display (DefectRegionsClosing)</l>
+<c>        * </c>
+<c>        * Emphasize defect regions</c>
+<l>        dev_set_color ('magenta')</l>
+<l>        dev_set_draw ('margin')</l>
+<l>        union1 (DefectRegionsClosing, RegionUnion)</l>
+<l>        closing_circle (RegionUnion, RegionClosing, 10)</l>
+<l>        connection (RegionClosing, DefectRegionEnlarged)</l>
+<l>        elliptic_axis (DefectRegionEnlarged, Ra, Rb, Phi)</l>
+<l>        if (|Phi|)</l>
+<l>            area_center (DefectRegionEnlarged, Area, RowEllipse, ColumnEllipse)</l>
+<l>            gen_ellipse (Ellipse, RowEllipse, ColumnEllipse, Phi, Ra * 2, Rb * 2)</l>
+<l>            dev_display (Ellipse)</l>
+<c>            </c>
+<c>                      </c>
+<l>        endif</l>
+<l>    endfor</l>
+<c>    </c>
+<l>    dev_set_line_width (1)</l>
+<l>    dev_set_color ('green')</l>
+<l>    dev_display (ContoursAffineTrans_BNK)</l>
+<l>    dev_display (Rectangle_BNK)</l>
+<l>    dev_set_color ('green')</l>
+<l>*     if(error_column&gt;20)</l>
+<l>*         dev_set_color ('red')</l>
+<l>*     endif</l>
+<l>*     if(error_angle&gt;5)</l>
+<l>*         dev_set_color ('red')</l>
+<l>*     endif</l>
+<c>    </c>
+<l>    dev_display (ModelContoursTrans)</l>
+<c>    * </c>
+<l>    TimePrintInspect := EndSeconds - StartSeconds</l>
+<l>    disp_message (WindowHandle, 'Inspection Time: ' + ((TimeObjSearch + TimePrintInspect) * 1000.0)$'.04' + ' ms', 'window', 12, 12, 'black', 'true')</l>
+<l>else</l>
+<l>    disp_message (WindowHandle, 'No shape model found.', 'window', 12, 12, 'red', 'true')</l>
+<l>endif</l>
+<c>* </c>
+<l>return ()</l>
+</body>
+<docu id="inspect_label">
+<chapters lang="en_US">
+<item>demo_frame</item>
+</chapters>
+<parameters>
+<parameter id="BackgroundGVModel"/>
+<parameter id="ColumnModel"/>
+<parameter id="ForegroundGVModel"/>
+<parameter id="ModelID_BNK"/>
+<parameter id="ModelID_LAB"/>
+<parameter id="RegionROI"/>
+<parameter id="RowModel"/>
+<parameter id="VariationID"/>
+<parameter id="WindowHandle"/>
+<parameter id="rImage"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="get_grayval_range">
+<interface>
+<io>
+<par name="Image" base_type="iconic" dimension="0"/>
+<par name="RegionROI" base_type="iconic" dimension="0"/>
+</io>
+<oo>
+<par name="RegionForeground" base_type="iconic" dimension="0"/>
+<par name="RegionBackground" base_type="iconic" dimension="0"/>
+</oo>
+<oc>
+<par name="BackgroundGVal" base_type="ctrl" dimension="0"/>
+<par name="ForegroundGVal" base_type="ctrl" dimension="0"/>
+</oc>
+</interface>
+<body>
+<l>reduce_domain (Image, RegionROI, ImageReduced)</l>
+<l>gauss_image (ImageReduced, ImageGauss, 5)</l>
+<l>binary_threshold (ImageGauss, RegionBackground, 'max_separability', 'dark', UsedThreshold)</l>
+<l>difference (RegionROI, RegionBackground, RegionForeground)</l>
+<l>intensity (RegionForeground, Image, ForegroundGVal, DeviationFG)</l>
+<l>intensity (RegionBackground, Image, BackgroundGVal, DeviationBG)</l>
+<l>return ()</l>
+</body>
+<docu id="get_grayval_range">
+<parameters>
+<parameter id="BackgroundGVal"/>
+<parameter id="ForegroundGVal"/>
+<parameter id="Image"/>
+<parameter id="RegionBackground"/>
+<parameter id="RegionForeground"/>
+<parameter id="RegionROI"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="get_model_region">
+<interface>
+<io>
+<par name="rImage" base_type="iconic" dimension="0"/>
+</io>
+<oo>
+<par name="RegionROI" base_type="iconic" dimension="0"/>
+<par name="ImageReduced" base_type="iconic" dimension="0"/>
+</oo>
+</interface>
+<body>
+<c></c>
+<c>* </c>
+<c>* Segment label on the cap</c>
+<l>rgb1_to_gray(rImage, GrayImage)</l>
+<l>gen_rectangle1 (ROI_0, 472.5, 366.5, 936.5, 752.5)</l>
+<l>reduce_domain(GrayImage, ROI_0, ImageReduced1)</l>
+<l>threshold(ImageReduced1, Region1, 0, 170)</l>
+<l>closing_circle(Region1, RegionClosing, 3.5)</l>
+<l>gen_rectangle1(Rectangle, 0, 0, 1, 15)</l>
+<l>closing(RegionClosing, Rectangle, RegionClosing1)</l>
+<l>fill_up(RegionClosing1, RegionFillUp)</l>
+<l>dilation_circle (RegionFillUp, RegionDilation, 1.5)</l>
+<l>connection (RegionDilation, ConnectedRegions)</l>
+<l>select_shape (ConnectedRegions, SelectedRegions, 'area', 'and', 100000, 9999999)</l>
+<l>union1 (SelectedRegions, RegionROI)</l>
+<l>* decompose3(rImage, AR, AG, AB)</l>
+<l>* trans_from_rgb(AR, AG, AB, AH, AS, AV, 'hsv')</l>
+<l>reduce_domain (rImage, RegionROI, ImageReduced)</l>
+<l>return ()</l>
+</body>
+<docu id="get_model_region">
+<parameters>
+<parameter id="ImageReduced"/>
+<parameter id="RegionROI"/>
+<parameter id="rImage"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="get_grayval_range_COPY_1">
+<interface>
+<io>
+<par name="Image" base_type="iconic" dimension="0"/>
+<par name="RegionROI" base_type="iconic" dimension="0"/>
+</io>
+<oo>
+<par name="RegionForeground" base_type="iconic" dimension="0"/>
+<par name="RegionBackground" base_type="iconic" dimension="0"/>
+</oo>
+<oc>
+<par name="BackgroundGVal" base_type="ctrl" dimension="0"/>
+<par name="ForegroundGVal" base_type="ctrl" dimension="0"/>
+</oc>
+</interface>
+<body>
+<l>reduce_domain (Image, RegionROI, ImageReduced)</l>
+<l>gauss_image (ImageReduced, ImageGauss, 5)</l>
+<l>binary_threshold (ImageGauss, RegionBackground, 'max_separability', 'dark', UsedThreshold)</l>
+<l>difference (RegionROI, RegionBackground, RegionForeground)</l>
+<l>intensity (RegionForeground, Image, ForegroundGVal, DeviationFG)</l>
+<l>intensity (RegionBackground, Image, BackgroundGVal, DeviationBG)</l>
+<l>return ()</l>
+</body>
+<docu id="get_grayval_range_COPY_1">
+<parameters>
+<parameter id="BackgroundGVal"/>
+<parameter id="ForegroundGVal"/>
+<parameter id="Image"/>
+<parameter id="RegionBackground"/>
+<parameter id="RegionForeground"/>
+<parameter id="RegionROI"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="inspect_cap">
+<interface>
+<io>
+<par name="rImage" base_type="iconic" dimension="0"/>
+<par name="RegionROI" base_type="iconic" dimension="0"/>
+</io>
+<ic>
+<par name="WindowHandle" base_type="ctrl" dimension="0"/>
+<par name="ModelID" base_type="ctrl" dimension="0"/>
+<par name="VariationID" base_type="ctrl" dimension="0"/>
+<par name="RowModel" base_type="ctrl" dimension="0"/>
+<par name="ColumnModel" base_type="ctrl" dimension="0"/>
+<par name="BackgroundGVModel" base_type="ctrl" dimension="0"/>
+<par name="ForegroundGVModel" base_type="ctrl" dimension="0"/>
+</ic>
+</interface>
+<body>
+<c></c>
+<c>* Find shape model in the input image</c>
+<l>count_seconds (StartSeconds)</l>
+<l>find_scaled_shape_model (rImage, ModelID, 0, rad(360), 0.9, 1.1, 0.4, 1, 1, 'least_squares_high', [5,3], 0.9, Row, Column, Angle, Scale, Score)</l>
+<l>count_seconds (EndSeconds)</l>
+<l>TimeObjSearch := EndSeconds - StartSeconds</l>
+<c></c>
+<l>get_shape_model_contours (ModelContours, ModelID, 1)</l>
+<c></c>
+<l>if (|Row| &gt; 0)</l>
+<c></c>
+<c>    * Align the model region and the found label region</c>
+<l>    vector_angle_to_rigid (Row[0], Column[0], Angle, RowModel[0], ColumnModel[0], 0, HomMat2DImage)</l>
+<l>    affine_trans_image (rImage, ImageAffineTrans, HomMat2DImage, 'constant', 'false')</l>
+<l>    get_grayval_range_COPY_1 (ImageAffineTrans, RegionROI, RegionForegroundImage, RegionBackgroundImage, BackgroundImage, ForegroundImage)</l>
+<c></c>
+<c>    * Scale image to the model's gray value range</c>
+<l>    Mult := (ForegroundGVModel - BackgroundGVModel) / (ForegroundImage - BackgroundImage)</l>
+<l>    Add := ForegroundGVModel - Mult * ForegroundImage</l>
+<c>    * Transform the contours of the models for the visualization</c>
+<l>    vector_angle_to_rigid (0, 0, 0, Row[0], Column[0], Angle, HomMat2DContour)</l>
+<l>    affine_trans_contour_xld (ModelContours, ModelContoursTrans, HomMat2DContour)</l>
+<l>    reduce_domain (ImageAffineTrans, RegionROI, ImageReduced)</l>
+<l>    scale_image (ImageReduced, ImageScaled, Mult, Add)</l>
+<c></c>
+<c>    * Print Inspection</c>
+<l>    count_seconds (StartSeconds)</l>
+<l>    compare_ext_variation_model (ImageScaled, RegionDiff, VariationID, 'light_dark')</l>
+<l>    count_seconds (EndSeconds)</l>
+<c>    * Analyze bright and dark defect regions</c>
+<l>    dev_display (rImage)</l>
+<l>    count_obj (RegionDiff, NumberRegionDiff)</l>
+<l>    for i := 1 to NumberRegionDiff by 1</l>
+<l>        select_obj (RegionDiff, RegionDiffSelected, i)</l>
+<l>        opening_circle (RegionDiffSelected, RegionOpening, 2.5)</l>
+<l>        connection (RegionOpening, ConnectedRegions)</l>
+<l>        select_shape (ConnectedRegions, DefectRegions, 'height', 'and', 20, 99999)</l>
+<c></c>
+<c>        * Transform regions to the original position in the input image</c>
+<l>        hom_mat2d_invert (HomMat2DImage, HomMat2DInvert)</l>
+<l>        affine_trans_region (DefectRegions, DefectRegionsTrans, HomMat2DInvert, 'nearest_neighbor')</l>
+<l>        closing_circle (DefectRegionsTrans, DefectRegionsClosing, 1.5)</l>
+<c></c>
+<c>        * Display bright and dark defects using different colors</c>
+<l>        dev_set_line_width (2)</l>
+<l>        dev_set_draw ('fill')</l>
+<l>        if (i == 1)</l>
+<l>            dev_set_color ('red')</l>
+<l>        else</l>
+<l>            dev_set_color ('orange')</l>
+<l>        endif</l>
+<l>        dev_display (DefectRegionsClosing)</l>
+<c></c>
+<c>        * Emphasize defect regions</c>
+<l>        dev_set_color ('magenta')</l>
+<l>        dev_set_draw ('margin')</l>
+<l>        union1 (DefectRegionsClosing, RegionUnion)</l>
+<l>        closing_circle (RegionUnion, RegionClosing, 10)</l>
+<l>        connection (RegionClosing, DefectRegionEnlarged)</l>
+<l>        elliptic_axis (DefectRegionEnlarged, Ra, Rb, Phi)</l>
+<l>        if (|Phi|)</l>
+<l>            area_center (DefectRegionEnlarged, Area, RowEllipse, ColumnEllipse)</l>
+<l>            gen_ellipse (Ellipse, RowEllipse, ColumnEllipse, Phi, Ra * 2, Rb * 2)</l>
+<l>            dev_display (Ellipse)</l>
+<l>        endif</l>
+<l>    endfor</l>
+<l>    dev_set_line_width (1)</l>
+<l>    dev_set_color ('green')</l>
+<l>    dev_display (ModelContoursTrans)</l>
+<c></c>
+<l>    TimePrintInspect := EndSeconds - StartSeconds</l>
+<l>    disp_message (WindowHandle, 'Inspection Time: ' + ((TimeObjSearch + TimePrintInspect) * 1000.0)$'.04' + ' ms', 'window', 12, 12, 'black', 'true')</l>
+<l>else</l>
+<l>    disp_message (WindowHandle, 'No shape model found.', 'window', 12, 12, 'red', 'true')</l>
+<l>endif</l>
+<c></c>
+<l>return ()</l>
+</body>
+<docu id="inspect_cap">
+<chapters lang="en_US">
+<item>demo_frame</item>
+</chapters>
+<chapters lang="zh_CN">
+<item>demo_frame</item>
+</chapters>
+<parameters>
+<parameter id="BackgroundGVModel"/>
+<parameter id="ColumnModel"/>
+<parameter id="ForegroundGVModel"/>
+<parameter id="ModelID"/>
+<parameter id="RegionROI"/>
+<parameter id="RowModel"/>
+<parameter id="VariationID"/>
+<parameter id="WindowHandle"/>
+<parameter id="rImage"/>
+</parameters>
+</docu>
+</procedure>
+</hdevelop>
