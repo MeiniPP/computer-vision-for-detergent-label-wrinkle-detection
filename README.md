@@ -4,18 +4,18 @@ HALCON / HDevelop coursework project for locating a detergent container's label 
 
 ## Overview
 
-The latest project script is `16-gen_label_templates(test).hdev`. It localizes the detergent container, aligns its label against a reference, and highlights regions that differ from the variation model as potential label wrinkles.
+The latest project script is `detergent-label-wrinkle-inspection.hdev`. It localizes the detergent container, aligns its label against a reference, and highlights regions that differ from the variation model as potential label wrinkles.
 
 Earlier experiments are preserved under [`code/`](code/). They include alternative segmentation and inspection approaches; the root script is the latest version and the recommended starting point.
 
 ### Source versions
 
-- `code/16-gen_label_templates(new).hdev` is the earliest version. It uses Canny edges directly in the container region, selects contours of length 200–500, and uses a narrower 0.9–1.1 scale range with local polarity. Its inspection loop has no median filter or per-image error handler.
-- `code/16-gen_label_templates(test).hdev` is a later version. It adds a variation-model training pass, median filtering, and per-image error handling.
-- The root `16-gen_label_templates(test).hdev` is the latest version. It uses local mean-based thresholding to extract the container region, broadens contour and scale ranges, ignores local polarity, and retains filtering and error handling. It is the recommended entry point.
+- `code/01-initial-prototype.hdev` is the earliest prototype. It establishes the variation-model inspection flow and reads the reference image without an explicit file extension.
+- `code/02-canny-container-localization.hdev` is a later iteration. It uses Canny edges directly in the container region, selects contours of length 200–500, and uses a narrower 0.9–1.1 scale range with local polarity.
+- `code/03-filtered-variation-inspection.hdev` adds a variation-model training pass, median filtering, and per-image error handling.
+- `detergent-label-wrinkle-inspection.hdev` is the latest iteration. It uses local mean-based thresholding to extract the container region, broadens contour and scale ranges, ignores local polarity, and retains filtering and error handling.
 
-These are successive experiments, not required modules. Run the root `test` script for the latest version; keep the earlier scripts only as development history.
-
+The numbered scripts show the development sequence; they are not required modules. Run the latest root script as the entry point. `code/alternative-dual-shape-model-inspection.hdev` preserves a separate two-model inspection approach.
 ## Requirements
 
 - HALCON / HDevelop 22.05 or a compatible version. The source file declares HALCON 22.05.
@@ -25,12 +25,12 @@ The 20 `Cam1_*.bmp` input images are included. The personal coursework report re
 
 ## Usage
 
-1. Open `16-gen_label_templates(test).hdev` in HDevelop.
+1. Open `detergent-label-wrinkle-inspection.hdev` in HDevelop.
 2. Set HDevelop's working directory to the repository root.
 3. Keep the included `Cam1_*.bmp` files beside the script.
 4. Run the script. It writes `detergent_container.shm`, `region.hobj`, `label_back.shm`, and `label_back.vam` to the working directory and inspects the first eight numbered images in its loop.
 
-The generated HALCON files are local build artifacts and are ignored by Git. The script includes interactive `stop()` calls between inspected images.
+The generated HALCON files are local build artifacts and are ignored by Git. The script includes interactive `stop()` calls between inspected images. HDevelop `.hdev` files are XML-based text files and can be read from GitHub without HALCON; use the file view or **Raw** view. Separate `.txt` copies are omitted to avoid duplicate source files.
 
 ## Method
 
@@ -57,8 +57,8 @@ These are qualitative coursework outputs, not an independently verified accuracy
 
 ```text
 .
-├── 16-gen_label_templates(test).hdev  # Latest version
-├── code/                              # Earlier HDevelop experiments
+├── detergent-label-wrinkle-inspection.hdev  # Latest version
+├── code/                              # Numbered experiments and alternative approach
 ├── figures/                           # Selected inspection result screenshots
 └── Cam1_*.bmp                         # Input image sequence
 ```
