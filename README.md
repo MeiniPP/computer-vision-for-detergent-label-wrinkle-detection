@@ -1,4 +1,4 @@
-# Detergent Label Wrinkle Detection
+# Computer Vision for Detergent Label Wrinkle Detection
 
 HALCON / HDevelop coursework project for locating a detergent container's label and detecting label wrinkles with shape matching and a variation model.
 
