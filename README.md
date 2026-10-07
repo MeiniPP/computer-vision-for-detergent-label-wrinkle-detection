@@ -63,9 +63,6 @@ These are qualitative coursework outputs, not an independently verified accuracy
 └── Cam1_*.bmp                         # Input image sequence
 ```
 
-## Verification and limitations
-
-The HDevelop application was not available for execution during repository cleanup, so runtime behavior and inspection accuracy have not been independently verified. The input images are included, and the report screenshots provide qualitative examples only; no quantitative accuracy claim is made.
 
 ## Course context
 
