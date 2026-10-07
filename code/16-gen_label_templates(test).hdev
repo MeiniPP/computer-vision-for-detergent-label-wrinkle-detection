@@ -30,7 +30,7 @@
 <l>union_adjacent_contours_xld (Edges, UnionContours, 1, 1, 'attr_keep')</l>
 <l>select_contours_xld (UnionContours, SelectedContours, 'contour_length', 200, 500, -0.5, 0.5)</l>
 <l>create_scaled_shape_model_xld(SelectedContours, 'auto', -0.1, 0.2, 'auto', 0.9, 1.1, 'auto', 'auto', 'use_polarity', 5, ModelID)</l>
-<l> write_shape_model(ModelID, 'bottle_body.shm')</l>
+<l> write_shape_model(ModelID, 'detergent_container.shm')</l>
 <c>* 创建标签区域</c>
 <l>rgb1_to_gray (ModelImage, GrayImage)</l>
 <l>edges_sub_pix (GrayImage, Edges, 'canny', 1, 20, 40)</l>
@@ -59,10 +59,13 @@
 <l>affine_trans_contour_xld (ModelContours, ModelContoursAffineTrans, HomMat2DTranslate)</l>
 <c>* </c>
 <c>* Create variation model for print inspection</c>
-<l>create_variation_model (Width, Height, 'byte', 'direct', VariationID)</l>
+<c>* 使用不同的方法进行变异模型的创建</c>
+<l>create_variation_model(Width, Height, 'byte', 'direct', VariationID)</l>
+<l>sobel_amp(ModelImage, VarImage, 'sum_abs', 7)</l>
+<l>prepare_direct_variation_model(ModelImage, VarImage, VariationID, [25, 35], [1.8, 1.8])</l>
 <l>write_variation_model(VariationID, 'label_back.vam')</l>
 <l>read_variation_model('label_back.vam', VariationID)</l>
-<l>read_shape_model ('label_back.shm', ModelID)</l>
+<l>read_shape_model('label_back.shm', ModelID)</l>
 <c></c>
 <c>* Generate variation image</c>
 <l>sobel_amp (ModelImage, VarImage, 'sum_abs', 5)</l>
@@ -73,15 +76,17 @@
 <c>* </c>
 <c></c>
 <c>* Perform print inspection</c>
-<l>for I := 1  to 8 by 1</l>
-<l>    read_image (rImage, 'Cam1_' + I$'02')</l>
-<l>*     decompose3(rImage, AR, AG, AB)</l>
-<l>*     trans_from_rgb(AR, AG, AB, AH, AS, AV, 'hsv')</l>
-<l>    inspect_cap (rImage, Region, WindowHandle, ModelID, VariationID, RowModel, ColumnModel, BackgroundGVModel, ForegroundGVModel)</l>
-<c></c>
+<l>for I := 1 to 8 by 1</l>
+<l>    try</l>
+<l>        read_image (rImage, 'Cam1_' + I$'02')</l>
+<l>        median_image (rImage, ImageFiltered, 'circle', 3, 'mirrored')</l>
+<l>        inspect_cap (ImageFiltered, Region, WindowHandle, ModelID, VariationID, RowModel, ColumnModel, BackgroundGVModel, ForegroundGVModel)</l>
+<l>    catch (Exception)</l>
+<c>        * 记录错误信息</c>
+<l>        write_string (WindowHandle, 'Error processing image: ' + I$'02')</l>
+<l>        continue</l>
+<l>    endtry</l>
 <c>    </c>
-<l>*     dev_display(Image)</l>
-<l>*     dev_display (RegionAffineTrans)</l>
 <l>    if (I &lt; 8)</l>
 <l>        disp_continue_message (WindowHandle, 'black', 'true')</l>
 <l>        stop ()</l>

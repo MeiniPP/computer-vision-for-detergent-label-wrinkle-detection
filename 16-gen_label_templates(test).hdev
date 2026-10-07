@@ -41,7 +41,7 @@
 <l>create_scaled_shape_model_xld(SelectedContours, 'auto', -0.1, 0.2, 'auto', 0.8, 1.2, 'auto', 'auto', 'ignore_local_polarity', 7, ModelID)</l>
 <c></c>
 <c>* \color{red}{模型路径优化}</c>
-<l>write_shape_model(ModelID, 'bottle_body.shm')</l>
+<l>write_shape_model(ModelID, 'detergent_container.shm')</l>
 <c>* 创建标签区域</c>
 <l>rgb1_to_gray (ModelImage, GrayImage)</l>
 <l>edges_sub_pix (GrayImage, Edges, 'canny', 1, 20, 40)</l>

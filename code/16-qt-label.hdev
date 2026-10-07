@@ -20,7 +20,7 @@
 <c>* Segment model region</c>
 <l>dev_display (ModelImage)</l>
 <c></c>
-<l>read_shape_model ('bottle_body.shm', ModelID_BNK)</l>
+<l>read_shape_model ('detergent_container.shm', ModelID_BNK)</l>
 <l>read_region (RegionROI,'region.hobj')</l>
 <l>reduce_domain (ModelImage, RegionROI, ImageReduced)</l>
 <c></c>
